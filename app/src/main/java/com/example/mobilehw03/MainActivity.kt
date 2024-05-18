@@ -25,24 +25,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.app.ActivityCompat
 import com.example.mobilehw03.network.ForegroundService
 import com.example.mobilehw03.network.NetworkChangeReceiver
-//import com.example.mobilehw03.network.NetworkService
 import android.net.ConnectivityManager
-import androidx.lifecycle.MutableLiveData
 import com.example.mobilehw03.network.NetworkStatus
 
 
 class MainActivity : ComponentActivity() {
-//    private var network_Status by mutableStateOf(NetworkChangeReceiver().network_status)
     private val networkChangeReceiver = NetworkChangeReceiver()
-//    private var _networkStatus = MutableLiveData<NetworkStatus>(NetworkStatus.Unknown) // Use MutableLiveData for live updates
-//    val networkStatus: LiveData<NetworkStatus> = _networkStatus // Expose networkStatus for binding
-//    private val networkService: NetworkService? = null
-//    var networkStatus by remember { mutableStateOf(NetworkStatus.Unknown) }
-
-//    override fun onNetworkStatusChange(newStatus: MutableLiveData<NetworkStatus>) {
-//        // Update networkStatus LiveData and UI based on newStatus
-//        _networkStatus.value = newStatus
-//    }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +40,6 @@ class MainActivity : ComponentActivity() {
         if (permissionState == PackageManager.PERMISSION_DENIED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         } else {
-            // Permission is already granted, create the notification channel
             createNotificationChannel()
         }
 
@@ -68,12 +55,6 @@ class MainActivity : ComponentActivity() {
             networkChangeReceiver,
             IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
         )
-//        networkChangeReceiver.setNetworkStatusListener(this)
-//        networkChangeReceiver.onNetworkStatusChange = { newStatus ->
-//            _networkStatus.value = newStatus
-//        }
-
-//        networkService?.addNetworkStatusListener(this)
 
         createNotificationChannel()
 
@@ -115,7 +96,6 @@ class MainActivity : ComponentActivity() {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-//                    val networkStatusText = networkChangeReceiver.network_status.value?.name ?: "Unknown"
                     Text(text = "Network Status Is : ${networkChangeReceiver.network_status}")
                 }
             }

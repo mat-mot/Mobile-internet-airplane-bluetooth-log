@@ -6,7 +6,6 @@ import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.example.mobilehw03.R
-import com.example.mobilehw03.network.NetworkStatus
 
 class ForegroundService: Service() {
     override fun onBind(intent: Intent?): IBinder? {
