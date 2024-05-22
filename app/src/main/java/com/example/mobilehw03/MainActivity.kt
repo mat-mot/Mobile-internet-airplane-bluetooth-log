@@ -12,18 +12,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.work.BackoffPolicy
 import com.example.mobilehw03.ui.theme.MobileHW03Theme
-import androidx.work.Constraints
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.mobilehw03.cWorker.StatusCheckWorker
@@ -34,7 +29,20 @@ import androidx.core.app.ActivityCompat
 import com.example.mobilehw03.network.ForegroundService
 import com.example.mobilehw03.network.NetworkChangeReceiver
 import android.net.ConnectivityManager
+import android.os.FileObserver
+import androidx.compose.material3.Surface
 import com.example.mobilehw03.network.NetworkStatus
+import android.content.Context
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Divider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.dp
+import org.json.JSONObject
+import java.io.File
 
 
 class MainActivity : ComponentActivity() {
@@ -99,25 +107,42 @@ class MainActivity : ComponentActivity() {
                 }
             }
             MobileHW03Theme {
-                LaunchedEffect(key1 = Unit) {
-                    val workRequest = PeriodicWorkRequestBuilder<StatusCheckWorker>(
-                        repeatInterval = 2,
-                        repeatIntervalTimeUnit = TimeUnit.MINUTES, 1, TimeUnit.SECONDS
-                    ).setBackoffCriteria(
-                        backoffPolicy = BackoffPolicy.LINEAR,
-                        duration = Duration.ofSeconds(15)
-                    ).build()
+                Surface {
+                    LaunchedEffect(key1 = Unit) {
+                        val workRequest = PeriodicWorkRequestBuilder<StatusCheckWorker>(
+                            repeatInterval = 1,
+                            repeatIntervalTimeUnit =TimeUnit.SECONDS
+                        ).setBackoffCriteria(
+                            backoffPolicy = BackoffPolicy.LINEAR,
+                            duration = Duration.ofSeconds(15)
+                        ).build()
 
-                    val workManager = WorkManager.getInstance(applicationContext)
-                    workManager.enqueue(workRequest)
+                        val workManager = WorkManager.getInstance(applicationContext)
+                        workManager.enqueue(workRequest)
+                    }
+                    val logs = remember { mutableStateOf(readJsonFromFile(this, "logs.txt")) }
+
+                    val observer = remember {
+                        JsonFileObserver(this, "logs.txt") {
+                            logs.value = readJsonFromFile(this, "logs.txt")
+                        }
+                    }
+
+                    DisposableEffect(this) {
+                        observer.startWatching()
+                        onDispose {
+                            observer.stopWatching()
+                        }
+                    }
+
+                    LazyColumn() {
+                        items(logs.value) { log ->
+                            Text(text = log)
+                            Divider()
+                        }
+                    }
                 }
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(text = "Network Status Is : ${networkChangeReceiver.network_status}")
-                }
+
             }
         }
     }
@@ -139,6 +164,45 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         unregisterReceiver(networkChangeReceiver)
     }
+
+
+}
+
+class JsonFileObserver(
+    private val context: Context,
+    private val fileName: String,
+    private val onFileChanged: () -> Unit
+) : FileObserver(File(context.filesDir, fileName).absolutePath, CLOSE_WRITE) {
+
+    override fun onEvent(event: Int, path: String?) {
+        if (event == CLOSE_WRITE) {
+            onFileChanged()
+        }
+    }
+}
+
+fun readJsonFromFile(context: Context, fileName: String): List<String> {
+    val logFile = File(context.filesDir, "logs.txt")
+    val logs = mutableListOf<String>()
+    if (logFile.exists()) {
+        logFile.useLines { lines ->
+            lines.forEach { line ->
+                val jsonObject = JSONObject(line)
+                val timestamp = jsonObject.getString("timestamp")
+                val bluetoothEnabled = jsonObject.getBoolean("bluetooth status is :")
+                val airplaneModeOn = jsonObject.getBoolean("airplane status is :")
+
+                val logMessage =
+                    "time: ${timestamp}\nBluetooth status is :${if (bluetoothEnabled) "Enabled" else "Disabled"},\nAirplane mode status is :" + " ${
+                        if
+                                (airplaneModeOn) "On" else "Off"
+                    }"
+                logs.add(logMessage)
+            }
+        }
+    }
+
+    return logs.reversed()
 }
 
 
