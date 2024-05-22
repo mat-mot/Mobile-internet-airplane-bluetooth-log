@@ -17,10 +17,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.work.BackoffPolicy
 import com.example.mobilehw03.ui.theme.MobileHW03Theme
+import androidx.work.Constraints
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.mobilehw03.cWorker.StatusCheckWorker
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 import androidx.core.content.ContextCompat
 import androidx.core.app.ActivityCompat
 import com.example.mobilehw03.network.ForegroundService
@@ -91,6 +99,18 @@ class MainActivity : ComponentActivity() {
                 }
             }
             MobileHW03Theme {
+                LaunchedEffect(key1 = Unit) {
+                    val workRequest = PeriodicWorkRequestBuilder<StatusCheckWorker>(
+                        repeatInterval = 2,
+                        repeatIntervalTimeUnit = TimeUnit.MINUTES, 1, TimeUnit.SECONDS
+                    ).setBackoffCriteria(
+                        backoffPolicy = BackoffPolicy.LINEAR,
+                        duration = Duration.ofSeconds(15)
+                    ).build()
+
+                    val workManager = WorkManager.getInstance(applicationContext)
+                    workManager.enqueue(workRequest)
+                }
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
