@@ -43,6 +43,7 @@ class StatusCheckWorker(context: Context, workerParams: WorkerParameters) : Work
     private fun writeLogToFile(bluetoothStatus: Boolean, airplaneModeStatus: Boolean) {
         val logFile = File(applicationContext.filesDir, "logs.txt")
         val jsonObject = JSONObject()
+        jsonObject.put("type", "worker")
         jsonObject.put("timestamp", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(
             Date(System.currentTimeMillis())
         ))

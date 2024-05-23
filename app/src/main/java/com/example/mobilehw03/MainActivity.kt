@@ -43,6 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 class MainActivity : ComponentActivity() {
@@ -77,6 +80,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             when(networkChangeReceiver.network_status){
                 NetworkStatus.Available->{
+                    writeInternetLogToFile(NetworkStatus.Available, this)
                     sendBroadcast(Intent(applicationContext, ForegroundService::class.java)
                         .also {
                             it.action = ForegroundService.Actions.Available.toString()
@@ -84,6 +88,7 @@ class MainActivity : ComponentActivity() {
                         })
                 }
                 NetworkStatus.UnAvailable->{
+                    writeInternetLogToFile(NetworkStatus.UnAvailable, this)
                     sendBroadcast(Intent(applicationContext, ForegroundService::class.java)
                         .also {
                             it.action = ForegroundService.Actions.UnAvailable.toString()
@@ -91,6 +96,7 @@ class MainActivity : ComponentActivity() {
                         })
                 }
                 NetworkStatus.NotConnected->{
+                    writeInternetLogToFile(NetworkStatus.NotConnected, this)
                     sendBroadcast(Intent(applicationContext, ForegroundService::class.java)
                         .also {
                             it.action = ForegroundService.Actions.NotConnected.toString()
@@ -99,6 +105,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 NetworkStatus.Unknown -> {
+                    writeInternetLogToFile(NetworkStatus.Unknown, this)
                     sendBroadcast(Intent(applicationContext, ForegroundService::class.java)
                         .also {
                             it.action = ForegroundService.Actions.NotConnected.toString()
@@ -189,14 +196,23 @@ fun readJsonFromFile(context: Context, fileName: String): List<String> {
             lines.forEach { line ->
                 val jsonObject = JSONObject(line)
                 val timestamp = jsonObject.getString("timestamp")
-                val bluetoothEnabled = jsonObject.getBoolean("bluetooth status is :")
-                val airplaneModeOn = jsonObject.getBoolean("airplane status is :")
+                var logMessage = ""
+                if (jsonObject.getString("type") == "worker"){
+                    val bluetoothEnabled = jsonObject.getBoolean("bluetooth status is :")
+                    val airplaneModeOn = jsonObject.getBoolean("airplane status is :")
 
-                val logMessage =
-                    "time: ${timestamp}\nBluetooth status is :${if (bluetoothEnabled) "Enabled" else "Disabled"},\nAirplane mode status is :" + " ${
-                        if
-                                (airplaneModeOn) "On" else "Off"
-                    }"
+                    logMessage =
+                        "time: ${timestamp}\nBluetooth status is :${if (bluetoothEnabled) "Enabled" else "Disabled"},\nAirplane mode status is :" + " ${
+                            if
+                                    (airplaneModeOn) "On" else "Off"
+                        }"
+                }
+                else if (jsonObject.getString("type") == "service"){
+                    val internetStatus = jsonObject.getString("internet status is :")
+                    logMessage =
+                        "time: ${timestamp}\nInternet Status Is :${internetStatus}"
+                }
+
                 logs.add(logMessage)
             }
         }
@@ -205,7 +221,17 @@ fun readJsonFromFile(context: Context, fileName: String): List<String> {
     return logs.reversed()
 }
 
-
+private fun writeInternetLogToFile(internetStatus: NetworkStatus, context: Context) {
+    val logFile = File(context.filesDir, "logs.txt")
+    val jsonObject = JSONObject()
+    jsonObject.put("type", "service")
+    jsonObject.put("timestamp", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(
+        Date(System.currentTimeMillis())
+    ))
+    jsonObject.put("internet status is :", internetStatus.toString())
+    val jsonString = jsonObject.toString() + "\n"
+    logFile.appendText(jsonString)
+}
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
